@@ -11,6 +11,7 @@ $ pipenv install
 ```
 
 Make sure you have ChromeDriver installed.
+You'd also need an AWS account with Transcribe enabled, as well as the AWS CLI installed (and configured with your account).
 
 ## Running
 :warning: This space station is not fully operational yet! :warning:
