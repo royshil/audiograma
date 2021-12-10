@@ -33,7 +33,7 @@ To get the audiogram video.
 ## Built with
 
 - [Selenium](https://www.selenium.dev/) and [chromedriver](https://chromedriver.chromium.org/)
-- [audiomotion.dev](audiomotion.dev)
+- [audiomotion.dev](https://audiomotion.dev)
 - [canvasTxt](https://canvas-txt.geongeorge.com/#/)
 - [Pizzicato](https://alemangui.github.io/pizzicato/)
 - [coolors.co](https://coolors.co/75b9be-006494-ffe5d4-003554-051923)
