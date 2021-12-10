@@ -5,8 +5,13 @@ from selenium.webdriver.support import expected_conditions as EC
 import ffmpeg
 import logging
 import os
+import sys
 
 logging.getLogger().setLevel(logging.INFO)
+
+if len(sys.argv) < 3:
+    logging.fatal('Please supply a .wav and .json files on the command line')
+    sys.exit(1)
 
 script_directory = os.path.dirname(__file__)
 
@@ -38,8 +43,8 @@ if os.path.exists('myvid.mp4'):
 logging.info('Create environment')
 driver = webdriver.Chrome(options=options)
 driver.get(f'file://{script_directory}/index.html')
-driver.execute_script(f'window.transcriptionFile = \'{script_directory}/audiograma.wav-transcription.json\';')
-driver.execute_script(f'window.audioFile = \'{script_directory}/audiograma.wav\';')
+driver.execute_script(f'window.transcriptionFile = \'{script_directory}/{sys.argv[2]}\';')
+driver.execute_script(f'window.audioFile = \'{script_directory}/{sys.argv[1]}\';')
 driver.execute_script('window.startVideo();')
 logging.info('Creating video...')
 case_status = WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.ID, 'downloadlink')))
