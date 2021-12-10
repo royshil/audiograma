@@ -1,0 +1,180 @@
+<html>
+  <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Secular+One&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font: 13px sans-serif;
+        margin: 0;
+      }
+
+      #container {
+        width: 400px;
+        height: 256px;
+        max-height: 256px;
+        display: inline-block;
+        overflow-y: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- analyzer container -->
+    <div id="container"></div>
+    <!-- debug link -->
+    <a href="javascript:window.mySound.stop(); window.audioMotion.toggleAnalyzer(false);">Stop</a>
+    <a href="javascript:window.startVideo();" id="startVideo">Start</a>
+
+    <script type="module">
+      import AudioMotionAnalyzer from 'https://cdn.skypack.dev/audiomotion-analyzer?min';
+      import Pizzicato from 'https://cdn.skypack.dev/pizzicato';
+      import jquery from 'https://cdn.skypack.dev/jquery';
+      import canvasTxt from 'https://cdn.skypack.dev/canvas-txt';
+
+      window.transcriptionFile = null;
+      window.audioFile = null;
+
+      let transcription = null;
+      window.parseTranscription = function() {
+        jquery.getJSON(window.transcriptionFile, (data) => {
+          // break into "sentences" of 10 words
+          transcription = [];
+          const size = 10;
+          for (var i = 0; i < data.results.items.length; i += size) {
+            transcription.push({
+              start_time: data.results.items[i].start_time,
+              items: data.results.items.slice(i, i + size),
+            });
+          }
+        });
+      }
+
+      var x = 0;
+      const start = Date.now();
+      function drawCallback(instance) {
+        if (transcription == null) {
+          return;
+        }
+        const ctx = instance.canvasCtx;
+
+        const current = Date.now();
+        const elapsed = Math.abs(current - start) / 1000.0;
+
+        ctx.direction = 'rtl';
+
+        let textToHighlight = [];
+        let allText = [];
+        for (var i = transcription.length - 1; i >= 0; i -= 1) {
+          // Choose right text chunk
+          if (elapsed >= transcription[i].start_time) {
+            // Take all items for the background
+            allText = transcription[i].items.map((item) => item.alternatives[0].content);
+            // Scan items to highlight
+            for (var itemIdx = 0; itemIdx < transcription[i].items.length; itemIdx++) {
+              const item = transcription[i].items[itemIdx];
+              if (item.start_time == null) {
+                // punctutation marks have no start/end times, look at the prior item
+                if (elapsed >= transcription[i].items[itemIdx-1].start_time) {
+                  textToHighlight.push(item.alternatives[0].content);
+                }
+              } else if (elapsed >= item.start_time) {
+                textToHighlight.push(item.alternatives[0].content);
+              }
+            }
+            break;
+          }
+        }
+        canvasTxt.font = 'Secular One';
+        canvasTxt.fontSize = 48;
+        canvasTxt.align = 'right';
+        canvasTxt.vAlign = 'top';
+        canvasTxt.lineHeight = 60;
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = 'rgb(255, 229, 212)';
+        ctx.globalCompositeOperation = 'destination-over';
+        canvasTxt.drawText(ctx, allText.join(' '), 50, 50, instance.canvas.width - 100, instance.canvas.height)
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'rgb(255, 229, 212)';
+        ctx.globalCompositeOperation = 'destination-over';
+        canvasTxt.drawText(ctx, textToHighlight.join(' '), 50, 50, instance.canvas.width - 100, instance.canvas.height)
+
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = 'rgb(0, 100, 148)';
+        ctx.fillRect(0, 0, instance.canvas.width, instance.canvas.height);
+      }
+
+      // instantiate analyzer
+      window.audioMotion = new AudioMotionAnalyzer(
+        document.getElementById('container'),
+        {
+          audioCtx: Pizzicato.context,
+          height: document.getElementById('container').innerHeight,
+          mode: 3,
+          barSpace: .6,
+          showLeds: true,
+          onCanvasDraw: drawCallback,
+          radial: false,
+          showPeaks: false,
+          showScaleX: false,
+          showBgColor: false,
+          overlay: true,
+        }
+      );
+      window.audioMotion.registerGradient('my-grad', {
+        colorStops: [
+          'rgb(255, 229, 212)',
+          'rgb(117, 185, 190)',
+        ]
+      });
+      window.audioMotion.gradient = 'my-grad';
+
+      var rec = null;
+
+      window.startRecording = function() {
+        const chunks = []; // here we will store our recorded media chunks (Blobs)
+        const videoStream = window.audioMotion.canvas.captureStream(); // grab our canvas MediaStream
+
+        let dest = Pizzicato.context.createMediaStreamDestination();
+        mySound.sourceNode.connect(dest);
+        let audioTrack = dest.stream.getAudioTracks()[0];
+        // add it to your canvas stream:
+        videoStream.addTrack(audioTrack);
+
+        rec = new MediaRecorder(videoStream); // init the recorder
+        // every time the recorder has new data, we will store it in our array
+        rec.ondataavailable = e => chunks.push(e.data);
+        // only when the recorder stops, we construct a complete Blob from all the chunks
+        rec.onstop = e => exportVid(new Blob(chunks, {type: 'video/webm'}));
+
+        rec.start();
+      }
+
+      function exportVid(blob) {
+        const a = document.createElement('a');
+        a.id = 'downloadlink';
+        a.download = 'myvid.webm';
+        a.href = URL.createObjectURL(blob);
+        a.textContent = 'download';
+        document.body.appendChild(a);
+        a.click();
+      }
+
+      window.startVideo = function() {
+        window.parseTranscription();
+        window.mySound = new Pizzicato.Sound(
+          {
+            source: 'file',
+            options: { path: window.audioFile },
+          },
+          () => {
+            window.audioMotion.connectInput(mySound.getInputNode());
+            window.mySound.volume = 0.1;
+            window.mySound.play();
+            window.startRecording();
+          }
+        );
+        window.mySound.on('end', () => { rec.stop(); });
+      }
+    </script>
+  </body>
+</html>
