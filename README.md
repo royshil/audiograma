@@ -29,3 +29,12 @@ $ python drive.py myaudiofile.wav myaudiofile.wav-transcription.json
 ```
 To get the audiogram video.
 :metal:
+
+## Built with
+
+- [Selenium](https://www.selenium.dev/) and [chromedriver](https://chromedriver.chromium.org/)
+- [audiomotion.dev](audiomotion.dev)
+- [canvasTxt](https://canvas-txt.geongeorge.com/#/)
+- [Pizzicato](https://alemangui.github.io/pizzicato/)
+- [coolors.co](https://coolors.co/75b9be-006494-ffe5d4-003554-051923)
+- And a whole lot of Stackoverflow.com ...
